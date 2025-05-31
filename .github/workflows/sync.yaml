@@ -1,38 +1,38 @@
-name: Sync Upstream Fork
+name: Sync Upstream
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 每天 UTC 0 点运行
-  workflow_dispatch:     # 添加手动触发按钮
+    # 每天 UTC 时间 2 点自动同步 (可选)
+    - cron: '0 2 * * *'
+  workflow_dispatch: # 支持手动触发
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Fork
+      # 1. 检出你的 Fork 仓库
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # 获取完整历史记录
 
-      - name: Add Upstream Remote
+      # 2. 添加上游仓库
+      - name: Add Upstream
         run: |
-          git remote add upstream ${{ secrets.UPSTREAM_REPO_URL }} ||
-          git remote set-url upstream ${{ secrets.UPSTREAM_REPO_URL }}
-        env:
-          UPSTREAM_REPO_URL: "https://github.com/lobehub/lobe-chat"
+          git remote add upstream https://github.com/${{ vars.UPSTREAM_REPO }}.git
+          git fetch upstream
 
-      - name: Fetch Upstream
-        run: git fetch upstream
-
+      # 3. 合并上游变更
       - name: Merge Upstream
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout main  # 改为你的分支名
-          git merge upstream/main --no-edit  # 合并上游变更
+          git checkout ${{ github.ref_name }}  # 切换到当前分支
+          git merge upstream/${{ vars.UPSTREAM_BRANCH }} --no-edit
 
+      # 4. 推送更新
       - name: Push Changes
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: main  # 目标分支
+          branch: ${{ github.ref_name }}
