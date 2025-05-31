@@ -1,33 +1,46 @@
-name: Sync upstream repository
+name: Sync Upstream
 
 on:
   schedule:
-    - cron: "0 0 * * *"  # 每天 UTC 0 点运行
-  workflow_dispatch:
+    # 每天 UTC 时间 0 点自动同步（可根据需求调整）
+    - cron: '0 0 * * *'
+  workflow_dispatch: # 支持手动触发
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      # 步骤1：检出你的Fork仓库
+      - name: Checkout Fork
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0 # 获取完整历史记录
 
-      - name: Add upstream remote
+      # 步骤2：添加上游仓库地址
+      - name: Add Upstream Remote
         run: |
           git remote add upstream https://github.com/ORIGINAL_OWNER/ORIGINAL_REPO.git
           git fetch upstream
 
-      - name: Merge upstream changes (use theirs on conflict)
+      # 步骤3：合并上游变更到本地分支
+      - name: Merge Changes
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout main
-          git merge upstream/main -Xtheirs  # 强制采用上游更改
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git checkout main # 改为你的默认分支名
+          git merge upstream/main --no-edit --strategy-option theirs
 
-      - name: Push changes
-        uses: ad-m/github-push-action@master
+      # 步骤4：推送更新到你的Fork仓库
+      - name: Push Changes
+        run: git push origin main
+
+      # 可选：创建Pull Request（当存在冲突时）
+      - name: Create PR if Conflict
+        if: failure() && steps.merge.outcome == 'failure'
+        uses: webfactory/pull-request@v0.2.0
         with:
-          github_token: ${{ secrets.UPSTREAM_SYNC_TOKEN || secrets.GITHUB_TOKEN }}
-          branch: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Sync: Upstream changes"
+          body: "自动同步上游变更（存在冲突需手动解决）"
+          branch: "sync-upstream-$(date +%s)"
