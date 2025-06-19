@@ -2,8 +2,8 @@ name: Sync Upstream
 
 on:
   schedule:
-    # 每天 UTC 时间 2 点自动同步 (可选)
-    - cron: '0 2 * * *'
+    # 每天广州时间凌晨 3 点自动同步 (UTC 时间前一天 19 点)
+    - cron: '0 19 * * *'
   workflow_dispatch: # 支持手动触发
 
 jobs:
